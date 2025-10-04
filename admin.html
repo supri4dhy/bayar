@@ -194,19 +194,16 @@
 
 <script>
 // File: admin.html (JavaScript)
-// Waktu: Sabtu, 4 Oktober 2025 - 11:49 WIB
-// Fungsi: Merombak UI ke mode daftar mobile-friendly dengan interaksi ketuk & tekan lama.
+// Waktu: Sabtu, 4 Oktober 2025 - 15:35 WIB
+// Fungsi: Merombak UI ke mode daftar mobile-friendly dan memperbaiki urutan bulan.
 document.addEventListener('DOMContentLoaded', () => {
     // --- DEKLARASI ELEMEN ---
     const pelangganList = document.getElementById('pelanggan-list');
     const pelangganLoader = document.getElementById('pelanggan-loader');
     const pelangganListContainer = document.getElementById('pelanggan-list-container');
-
     const iconCheck = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
     const iconX = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
     const iconNA = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>`;
-
-    // ... (deklarasi elemen modal lainnya tetap sama)
     const detailModal = document.getElementById('detail-modal');
     const closeDetailModalBtn = document.getElementById('close-detail-modal-btn');
     const modalLoader = document.getElementById('modal-loader');
@@ -236,13 +233,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsForm = document.getElementById('settings-form');
     let currentPelangganData = null; 
 
+    const bulanNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
     // --- FUNGSI-FUNGSI HELPER ---
     const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
     
+    const parsePeriodeToDate = (periodeStr) => {
+        const parts = periodeStr.split(' ');
+        const bulanNama = parts[0];
+        const tahun = parseInt(parts[1], 10);
+        const bulanIndex = bulanNames.indexOf(bulanNama);
+        return new Date(tahun, bulanIndex);
+    };
+
     const showMessage = (elementId, message, type) => {
         const el = document.getElementById(elementId);
         el.textContent = message;
-        el.className = 'text-center text-sm p-3 rounded-lg'; // Reset kelas dasar
+        el.className = 'text-center text-sm p-3 rounded-lg';
         if (type === 'success') {
             el.classList.add('bg-green-900/50', 'text-green-300');
         } else {
@@ -270,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const populatePaymentForm = (periode, data) => {
-        const bulanNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
         const parts = periode.split(' ');
         const bulanNama = parts[0];
         const tahun = parts[1];
@@ -306,12 +312,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
                 
-                // --- Logika Klik dan Tekan Lama ---
                 let pressTimer = null;
                 let isLongPress = false;
 
                 const startPress = (e) => {
-                    e.preventDefault(); // Mencegah context menu di desktop
+                    e.preventDefault();
                     isLongPress = false;
                     const indicator = item.querySelector('.long-press-indicator');
                     if (indicator) indicator.style.width = '100%';
@@ -328,7 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (indicator) {
                          indicator.style.transition = 'width 150ms ease-out';
                          indicator.style.width = '0%';
-                         // Reset transisi setelah animasi selesai
                          setTimeout(() => {
                              indicator.style.transition = 'width 750ms linear';
                          }, 150);
@@ -340,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.addEventListener('touchstart', startPress, { passive: true });
                 item.addEventListener('mouseup', cancelPress);
                 item.addEventListener('touchend', cancelPress);
-                item.addEventListener('mouseleave', cancelPress); // Batal jika kursor keluar
+                item.addEventListener('mouseleave', cancelPress);
 
                 item.addEventListener('click', () => {
                     if (!isLongPress) {
@@ -384,7 +388,8 @@ document.addEventListener('DOMContentLoaded', () => {
             noHpInput.value = pelanggan.no_hp;
             
             detailTableBody.innerHTML = '';
-            Object.keys(tagihan_detail).sort((a,b) => b.localeCompare(a)).forEach(periode => {
+            Object.keys(tagihan_detail).sort((a, b) => parsePeriodeToDate(b) - parsePeriodeToDate(a))
+            .forEach(periode => {
                 const data = tagihan_detail[periode];
                 const row = document.createElement('tr');
                 row.className = 'border-b border-gray-700 hover:bg-gray-700/40 cursor-pointer transition-colors';
@@ -532,7 +537,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INISIALISASI ---
     (() => {
-        const bulanNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
         bulanNames.forEach((nama, index) => {
             bulanSelect.innerHTML += `<option value="${index + 1}">${nama}</option>`;
         });
