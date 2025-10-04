@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Dashboard Pembayaran</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none; /* Standard syntax */
+        }
+        .blurry-bg { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        .sticky-header th { position: sticky; top: 0; z-index: 10; }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-left-color: #34d399;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: all 300ms ease-out; }
+        .modal-leave { opacity: 1; transform: scale(1); }
+        .modal-leave-active { opacity: 0; transform: scale(0.95); transition: all 200ms ease-in; }
+        .long-press-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: rgba(255, 0, 0, 0.3);
+            width: 0;
+            border-radius: 0.75rem;
+            transition: width 750ms linear;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen text-white p-4 sm:p-6 lg:p-8">
+
+    <div class="w-full max-w-screen-xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Kolom Kiri: Daftar Pelanggan -->
+        <div class="lg:col-span-8">
+            <div class="blurry-bg bg-gray-800/50 border border-gray-700 rounded-2xl shadow-2xl p-6 h-full">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Daftar Pelanggan</h2>
+                    <button id="add-pelanggan-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm flex items-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                        Tambah
+                    </button>
+                </div>
+                 <p class="text-xs text-gray-400 mb-4 text-center border border-gray-700 bg-gray-900/30 rounded-lg p-2">Ketuk untuk detail, tekan lama untuk hapus.</p>
+                <div id="pelanggan-loader" class="flex justify-center py-8"><div class="loader"></div></div>
+                <div id="pelanggan-list-container" class="overflow-y-auto hidden lg:max-h-[calc(100vh-14rem)]">
+                    <div id="pelanggan-list" class="space-y-3">
+                        <!-- Data diisi oleh JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolom Kanan: Pengaturan -->
+        <div class="lg:col-span-4">
+            <div class="blurry-bg bg-gray-800/50 border border-gray-700 rounded-2xl shadow-2xl p-6">
+                <h2 class="text-xl font-bold mb-4">Pengaturan Tarif</h2>
+                <form id="settings-form" class="space-y-4">
+                    <div>
+                        <label for="tarif_sampah" class="block text-sm font-medium text-gray-300 mb-1">Tarif Sampah (Rp)</label>
+                        <input type="number" id="tarif_sampah" name="tarif_sampah" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2" required>
+                    </div>
+                    <div>
+                        <label for="tarif_ipal" class="block text-sm font-medium text-gray-300 mb-1">Tarif IPAL (Rp)</label>
+                        <input type="number" id="tarif_ipal" name="tarif_ipal" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2" required>
+                    </div>
+                    <div id="settings-response-message" class="text-center text-sm p-3 rounded-lg hidden"></div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Simpan Pengaturan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- === MODAL DETAIL & PEMBAYARAN === -->
+    <div id="detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-blur-sm hidden modal-enter">
+        <div class="blurry-bg bg-gray-800/80 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gray-700">
+                <h2 class="text-xl font-bold">Detail & Pembayaran</h2>
+                <button id="close-detail-modal-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            <div id="modal-content" class="p-6 overflow-y-auto">
+                <div id="modal-loader" class="flex justify-center py-8"><div class="loader"></div></div>
+                <div id="modal-data-view" class="hidden">
+                    <h3 id="detail-nama" class="text-lg font-semibold text-green-400"></h3>
+                    <p id="detail-nohp" class="text-sm text-gray-400 mb-1 font-mono"></p>
+                    <p id="detail-alamat" class="text-sm text-gray-300 mb-4"></p>
+                    <div class="overflow-y-auto max-h-60 mb-4">
+                      <table class="w-full text-sm text-left">
+                          <thead class="sticky-header bg-gray-800/80 backdrop-blur-sm">
+                              <tr><th class="p-3">Periode</th><th class="p-3 text-center">Sampah</th><th class="p-3 text-center">IPAL</th></tr>
+                          </thead>
+                          <tbody id="detail-table-body"></tbody>
+                      </table>
+                    </div>
+                    <div class="mb-6 pt-4 border-t border-gray-700 flex justify-between font-semibold">
+                        <span>Total Tunggakan:</span>
+                        <span id="detail-total-tunggakan" class="text-red-400"></span>
+                    </div>
+                    <form id="payment-form" class="space-y-4">
+                        <h4 class="font-semibold text-gray-200">Input Pembayaran Baru</h4>
+                        <input type="hidden" id="no_hp" name="no_hp">
+                        <div class="grid grid-cols-2 gap-4">
+                            <select id="bulan" name="bulan" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2" required></select>
+                            <input type="number" id="tahun" name="tahun" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="status_sampah" class="block text-xs text-gray-400 mb-1">Status Sampah</label>
+                                <select id="status_sampah" name="status_sampah" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2" required>
+                                    <option value="Belum Lunas">Belum Lunas</option><option value="Lunas">Lunas</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="status_ipal" class="block text-xs text-gray-400 mb-1">Status IPAL</label>
+                                <select id="status_ipal" name="status_ipal" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2" required>
+                                    <option value="Belum Lunas">Belum Lunas</option><option value="Lunas">Lunas</option>
+                                </select>
+                            </div>
+                        </div>
+                         <div id="payment-response-message" class="text-center text-sm p-3 rounded-lg hidden"></div>
+                        <button type="submit" id="submit-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Simpan Pembayaran</button>
+                         <a id="whatsapp-btn" href="#" target="_blank" class="w-full text-center block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors hidden mt-2">Kirim Notifikasi WA & Tutup</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- === MODAL CRUD PELANGGAN === -->
+    <div id="crud-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-blur-sm hidden modal-enter">
+        <div class="blurry-bg bg-gray-800/80 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-lg">
+            <form id="crud-form">
+                <input type="hidden" id="original_no_hp" name="original_no_hp">
+                <div class="flex justify-between items-center p-4 border-b border-gray-700">
+                    <h2 id="crud-modal-title" class="text-xl font-bold"></h2>
+                    <button type="button" id="close-crud-modal-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label for="crud_nama_pelanggan" class="block text-sm font-medium text-gray-300 mb-1">Nama Pelanggan</label>
+                        <input type="text" name="nama_pelanggan" id="crud_nama_pelanggan" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2" required>
+                    </div>
+                    <div>
+                        <label for="crud_no_hp" class="block text-sm font-medium text-gray-300 mb-1">No. HP</label>
+                        <input type="text" name="no_hp" id="crud_no_hp" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2" required>
+                    </div>
+                    <div>
+                        <label for="crud_alamat" class="block text-sm font-medium text-gray-300 mb-1">Alamat</label>
+                        <textarea name="alamat" id="crud_alamat" rows="2" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2"></textarea>
+                    </div>
+                    <div class="flex items-center space-x-8 pt-2">
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="langganan_sampah" id="crud_langganan_sampah" value="1" class="w-5 h-5 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500">
+                            <span>Langganan Sampah</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="langganan_ipal" id="crud_langganan_ipal" value="1" class="w-5 h-5 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500">
+                            <span>Langganan IPAL</span>
+                        </label>
+                    </div>
+                    <div id="crud-response-message" class="text-center text-sm p-3 rounded-lg hidden"></div>
+                </div>
+                <div class="p-4 bg-gray-900/50 border-t border-gray-700 rounded-b-2xl flex justify-end">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- === MODAL KONFIRMASI HAPUS === -->
+    <div id="delete-confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-blur-sm hidden modal-enter">
+        <div class="blurry-bg bg-gray-800/80 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <h3 class="text-lg font-semibold mb-2">Anda Yakin?</h3>
+            <p class="text-gray-400 mb-6">Data pelanggan dan semua tagihan terkait akan dihapus permanen.</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancel-delete-btn" class="px-6 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 transition-colors">Batal</button>
+                <button id="confirm-delete-btn" class="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition-colors">Hapus</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// File: admin.html (JavaScript)
+// Waktu: Sabtu, 4 Oktober 2025 - 11:49 WIB
+// Fungsi: Merombak UI ke mode daftar mobile-friendly dengan interaksi ketuk & tekan lama.
+document.addEventListener('DOMContentLoaded', () => {
+    // --- DEKLARASI ELEMEN ---
+    const pelangganList = document.getElementById('pelanggan-list');
+    const pelangganLoader = document.getElementById('pelanggan-loader');
+    const pelangganListContainer = document.getElementById('pelanggan-list-container');
+
+    const iconCheck = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+    const iconX = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+    const iconNA = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>`;
+
+    // ... (deklarasi elemen modal lainnya tetap sama)
+    const detailModal = document.getElementById('detail-modal');
+    const closeDetailModalBtn = document.getElementById('close-detail-modal-btn');
+    const modalLoader = document.getElementById('modal-loader');
+    const modalDataView = document.getElementById('modal-data-view');
+    const detailNama = document.getElementById('detail-nama');
+    const detailNohp = document.getElementById('detail-nohp');
+    const detailAlamat = document.getElementById('detail-alamat');
+    const detailTableBody = document.getElementById('detail-table-body');
+    const detailTotalTunggakan = document.getElementById('detail-total-tunggakan');
+    const whatsappBtn = document.getElementById('whatsapp-btn');
+    const paymentForm = document.getElementById('payment-form');
+    const noHpInput = document.getElementById('no_hp');
+    const bulanSelect = document.getElementById('bulan');
+    const tahunInput = document.getElementById('tahun');
+    const statusSampahSelect = document.getElementById('status_sampah');
+    const statusIpalSelect = document.getElementById('status_ipal');
+    const crudModal = document.getElementById('crud-modal');
+    const closeCrudModalBtn = document.getElementById('close-crud-modal-btn');
+    const crudModalTitle = document.getElementById('crud-modal-title');
+    const crudForm = document.getElementById('crud-form');
+    const addPelangganBtn = document.getElementById('add-pelanggan-btn');
+    let isEditMode = false;
+    const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    let noHpToDelete = null;
+    const settingsForm = document.getElementById('settings-form');
+    let currentPelangganData = null; 
+
+    // --- FUNGSI-FUNGSI HELPER ---
+    const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+    
+    const showMessage = (elementId, message, type) => {
+        const el = document.getElementById(elementId);
+        el.textContent = message;
+        el.className = 'text-center text-sm p-3 rounded-lg'; // Reset kelas dasar
+        if (type === 'success') {
+            el.classList.add('bg-green-900/50', 'text-green-300');
+        } else {
+            el.classList.add('bg-red-900/50', 'text-red-300');
+        }
+        el.classList.remove('hidden');
+    };
+
+    const hideMessage = (elementId) => document.getElementById(elementId).classList.add('hidden');
+    const getStatusIcon = (status) => status === 'Lunas' ? iconCheck : (status === 'Belum Lunas' ? iconX : iconNA);
+    
+    // --- LOGIKA MODAL GENERIC ---
+    const openModal = (modalEl) => {
+        modalEl.classList.remove('hidden');
+        setTimeout(() => modalEl.classList.add('modal-enter-active'), 10);
+    };
+
+    const closeModal = (modalEl) => {
+        modalEl.classList.remove('modal-enter-active');
+        modalEl.classList.add('modal-leave-active');
+        setTimeout(() => {
+            modalEl.classList.add('hidden');
+            modalEl.classList.remove('modal-leave-active');
+        }, 200);
+    };
+    
+    const populatePaymentForm = (periode, data) => {
+        const bulanNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+        const parts = periode.split(' ');
+        const bulanNama = parts[0];
+        const tahun = parts[1];
+        const bulanAngka = bulanNames.indexOf(bulanNama) + 1;
+        bulanSelect.value = bulanAngka;
+        tahunInput.value = tahun;
+        if (data.sampah !== 'Tidak Langganan') statusSampahSelect.value = data.sampah;
+        if (data.ipal !== 'Tidak Langganan') statusIpalSelect.value = data.ipal;
+    };
+
+    // --- PEMUATAN DATA (VERSI MOBILE) ---
+    const loadPelangganList = async () => {
+        try {
+            pelangganLoader.classList.remove('hidden');
+            pelangganListContainer.classList.add('hidden');
+            const response = await fetch('api/get_all_data.php?view=admin');
+            const result = await response.json();
+            if (result.status !== 'success') throw new Error(result.message);
+
+            pelangganList.innerHTML = '';
+            result.data.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'bg-gray-700/50 border border-gray-700 rounded-xl p-3 flex justify-between items-center cursor-pointer active:bg-gray-600/50 transition-colors duration-150 relative overflow-hidden';
+                
+                item.innerHTML = `
+                    <div class="long-press-indicator"></div>
+                    <div>
+                        <p class="font-semibold text-white">${p.nama_pelanggan}</p>
+                        <p class="text-sm text-gray-400 font-mono">${p.no_hp}</p>
+                    </div>
+                    <div class="text-right flex-shrink-0 ml-4">
+                        <p class="font-bold ${p.total_tunggakan > 0 ? 'text-red-400' : 'text-green-400'}">${formatRupiah(p.total_tunggakan)}</p>
+                    </div>
+                `;
+                
+                // --- Logika Klik dan Tekan Lama ---
+                let pressTimer = null;
+                let isLongPress = false;
+
+                const startPress = (e) => {
+                    e.preventDefault(); // Mencegah context menu di desktop
+                    isLongPress = false;
+                    const indicator = item.querySelector('.long-press-indicator');
+                    if (indicator) indicator.style.width = '100%';
+
+                    pressTimer = setTimeout(() => {
+                        isLongPress = true;
+                        if (indicator) indicator.style.width = '0%';
+                        confirmDeletePelanggan(p.no_hp);
+                    }, 750);
+                };
+
+                const cancelPress = () => {
+                    const indicator = item.querySelector('.long-press-indicator');
+                    if (indicator) {
+                         indicator.style.transition = 'width 150ms ease-out';
+                         indicator.style.width = '0%';
+                         // Reset transisi setelah animasi selesai
+                         setTimeout(() => {
+                             indicator.style.transition = 'width 750ms linear';
+                         }, 150);
+                    }
+                    clearTimeout(pressTimer);
+                };
+
+                item.addEventListener('mousedown', startPress);
+                item.addEventListener('touchstart', startPress, { passive: true });
+                item.addEventListener('mouseup', cancelPress);
+                item.addEventListener('touchend', cancelPress);
+                item.addEventListener('mouseleave', cancelPress); // Batal jika kursor keluar
+
+                item.addEventListener('click', () => {
+                    if (!isLongPress) {
+                        loadDetailAndOpenModal(p.no_hp);
+                    }
+                });
+
+                pelangganList.appendChild(item);
+            });
+        } catch (error) {
+            console.error("Error loading pelanggan list:", error);
+            pelangganLoader.innerHTML = `<p class="text-red-400">Gagal memuat data.</p>`;
+        } finally {
+            pelangganLoader.classList.add('hidden');
+            pelangganListContainer.classList.remove('hidden');
+        }
+    };
+
+    const loadDetailAndOpenModal = async (noHp) => {
+        openModal(detailModal);
+        modalLoader.classList.remove('hidden');
+        modalDataView.classList.add('hidden');
+        hideMessage('payment-response-message');
+        whatsappBtn.classList.add('hidden');
+        const now = new Date();
+        bulanSelect.value = now.getMonth() + 1;
+        tahunInput.value = now.getFullYear();
+
+        try {
+            const response = await fetch(`api/api.php?no_hp=${noHp}`);
+            if (!response.ok) throw new Error(`Server merespons: ${response.status}`);
+            const result = await response.json();
+            if (result.status !== 'success') throw new Error(result.message);
+
+            currentPelangganData = result.data;
+            const { pelanggan, tagihan_detail, total_tunggakan } = result.data;
+
+            detailNama.textContent = pelanggan.nama_pelanggan;
+            detailNohp.textContent = pelanggan.no_hp;
+            detailAlamat.textContent = pelanggan.alamat || 'Alamat tidak tersedia';
+            noHpInput.value = pelanggan.no_hp;
+            
+            detailTableBody.innerHTML = '';
+            Object.keys(tagihan_detail).sort((a,b) => b.localeCompare(a)).forEach(periode => {
+                const data = tagihan_detail[periode];
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-700 hover:bg-gray-700/40 cursor-pointer transition-colors';
+                row.innerHTML = `<td class="p-3">${periode}</td><td class="p-3 text-center">${getStatusIcon(data.sampah)}</td><td class="p-3 text-center">${getStatusIcon(data.ipal)}</td>`;
+                row.addEventListener('click', () => populatePaymentForm(periode, data));
+                detailTableBody.appendChild(row);
+            });
+            detailTotalTunggakan.textContent = formatRupiah(total_tunggakan);
+        } catch (error) {
+            console.error("Error loading detail:", error);
+            closeModal(detailModal);
+            alert(`Gagal memuat detail pelanggan.\nError: ${error.message}`);
+        } finally {
+            modalLoader.classList.add('hidden');
+            modalDataView.classList.remove('hidden');
+        }
+    };
+    
+    const loadSettings = async () => {
+         try {
+            const response = await fetch('api/get_settings.php');
+            if (!response.ok) throw new Error(`Server merespons: ${response.status}`);
+            const result = await response.json();
+            if (result.status !== 'success') throw new Error(result.message);
+            document.getElementById('tarif_sampah').value = result.data.tarif_sampah;
+            document.getElementById('tarif_ipal').value = result.data.tarif_ipal;
+         } catch(error) {
+            console.error("Error loading settings:", error);
+            showMessage('settings-response-message', `Gagal memuat pengaturan. Error: ${error.message}`, 'error');
+         }
+    };
+
+    const openCrudModal = async (noHp = null) => {
+        crudForm.reset();
+        hideMessage('crud-response-message');
+        isEditMode = noHp !== null;
+        if(isEditMode) {
+            crudModalTitle.textContent = 'Edit Pelanggan';
+            try {
+                const response = await fetch(`api/api.php?no_hp=${noHp}`);
+                const result = await response.json();
+                if (result.status !== 'success') throw new Error(result.message);
+                const { pelanggan } = result.data;
+                document.getElementById('crud_nama_pelanggan').value = pelanggan.nama_pelanggan;
+                document.getElementById('crud_no_hp').value = pelanggan.no_hp;
+                document.getElementById('original_no_hp').value = pelanggan.no_hp;
+                document.getElementById('crud_alamat').value = pelanggan.alamat || '';
+                document.getElementById('crud_langganan_sampah').checked = pelanggan.langganan_sampah == 1;
+                document.getElementById('crud_langganan_ipal').checked = pelanggan.langganan_ipal == 1;
+            } catch (error) {
+                alert(`Gagal memuat data untuk edit: ${error.message}`);
+                return;
+            }
+        } else {
+            crudModalTitle.textContent = 'Tambah Pelanggan Baru';
+            document.getElementById('original_no_hp').value = '';
+        }
+        openModal(crudModal);
+    };
+
+    const handleCrudFormSubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(crudForm);
+        const endpoint = isEditMode ? 'api/update_pelanggan.php' : 'api/add_pelanggan.php';
+        try {
+            const response = await fetch(endpoint, { method: 'POST', body: formData });
+            const result = await response.json();
+            showMessage('crud-response-message', result.message, result.status);
+            if(result.status === 'success') {
+                await loadPelangganList();
+                setTimeout(() => closeModal(crudModal), 1500);
+            }
+        } catch (error) {
+            showMessage('crud-response-message', `Terjadi kesalahan: ${error.message}`, 'error');
+        }
+    };
+    
+    const confirmDeletePelanggan = (noHp) => {
+        noHpToDelete = noHp;
+        openModal(deleteConfirmModal);
+    };
+
+    const executeDelete = async () => {
+        if (!noHpToDelete) return;
+        try {
+            const formData = new FormData();
+            formData.append('no_hp', noHpToDelete);
+            const response = await fetch('api/delete_pelanggan.php', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (result.status !== 'success') throw new Error(result.message);
+            await loadPelangganList();
+        } catch (error) {
+            alert(`Gagal menghapus pelanggan: ${error.message}`);
+        } finally {
+            noHpToDelete = null;
+            closeModal(deleteConfirmModal);
+        }
+    };
+
+    // --- EVENT LISTENERS ---
+    addPelangganBtn.addEventListener('click', () => openCrudModal());
+    crudForm.addEventListener('submit', handleCrudFormSubmit);
+    closeCrudModalBtn.addEventListener('click', () => closeModal(crudModal));
+    closeDetailModalBtn.addEventListener('click', () => closeModal(detailModal));
+    confirmDeleteBtn.addEventListener('click', executeDelete);
+    cancelDeleteBtn.addEventListener('click', () => closeModal(deleteConfirmModal));
+    
+    [detailModal, crudModal, deleteConfirmModal].forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal(modal);
+        });
+    });
+
+    paymentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(paymentForm);
+        const response = await fetch('api/update_payment.php', { method: 'POST', body: formData });
+        const result = await response.json();
+        showMessage('payment-response-message', result.message, result.status);
+        if(result.status === 'success'){
+            await loadDetailAndOpenModal(noHpInput.value);
+            const newTotalTunggakan = currentPelangganData.total_tunggakan;
+            const nama = currentPelangganData.pelanggan.nama_pelanggan;
+            const periodeBayar = `${bulanSelect.options[bulanSelect.selectedIndex].text} ${tahunInput.value}`;
+            const pesan = `Yth. Bapak/Ibu ${nama},\n\nPembayaran iuran untuk bulan ${periodeBayar} telah kami terima. Terima kasih.\n\nTotal tunggakan Anda saat ini adalah: ${formatRupiah(newTotalTunggakan)}.\n\nSalam,\nAdmin Iuran`;
+            const noHpWa = currentPelangganData.pelanggan.no_hp.startsWith('0') ? '62' + currentPelangganData.pelanggan.no_hp.substring(1) : currentPelangganData.pelanggan.no_hp;
+            whatsappBtn.href = `https://wa.me/${noHpWa}?text=${encodeURIComponent(pesan)}`;
+            whatsappBtn.classList.remove('hidden');
+            whatsappBtn.onclick = () => closeModal(detailModal);
+            await loadPelangganList();
+        }
+    });
+
+    settingsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(settingsForm);
+        const response = await fetch('api/update_settings.php', { method: 'POST', body: formData });
+        const result = await response.json();
+        showMessage('settings-response-message', result.message, result.status);
+        if(result.status === 'success'){
+           await loadSettings();
+           await loadPelangganList();
+        }
+    });
+
+    // --- INISIALISASI ---
+    (() => {
+        const bulanNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+        bulanNames.forEach((nama, index) => {
+            bulanSelect.innerHTML += `<option value="${index + 1}">${nama}</option>`;
+        });
+        const now = new Date();
+        bulanSelect.value = now.getMonth() + 1;
+        tahunInput.value = now.getFullYear();
+        loadSettings();
+        loadPelangganList();
+    })();
+});
+</script>
+</body>
+</html>
+

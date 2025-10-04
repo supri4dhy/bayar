@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Iuran Sampah & IPAL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .dashboard-container, .form-container { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        .table-container { max-height: 400px; }
+        .sticky-header th { position: sticky; top: 0; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen text-white p-4 sm:p-6">
+
+    <div id="app" class="w-full max-w-6xl mx-auto">
+
+        <!-- ===== VIEW LOGIN & DASHBOARD PUBLIK (GABUNGAN) ===== -->
+        <!-- File: index.html -->
+        <!-- Waktu: 04 Oktober 2025, 09:16 WIB -->
+        <!-- Fungsi: Tampilan utama yang menunjukkan dashboard publik dan form login. -->
+        <div id="public-view">
+            <header class="text-center mb-8">
+                <h1 class="text-4xl font-bold">Dashboard Iuran Warga</h1>
+                <p class="text-gray-400 mt-2">Data iuran sampah dan IPAL terupdate. Login untuk melihat detail tagihan Anda.</p>
+            </header>
+
+            <!-- Form Login -->
+            <div class="form-container bg-gray-800/50 border border-gray-700 rounded-2xl shadow-2xl p-6 max-w-md mx-auto mb-8">
+                 <div class="space-y-4">
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-300 mb-2">Lihat Detail Tagihan Anda</label>
+                        <input type="tel" id="phone" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Masukkan Nomor HP Anda...">
+                    </div>
+                    <p id="error-message" class="text-red-400 text-sm text-center hidden"></p>
+                    <button id="login-btn" class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform hover:-translate-y-0.5 transition-all">
+                        Cek Tagihan
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Publik -->
+            <div id="public-dashboard" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Tabel Iuran Sampah -->
+                <div class="bg-gray-800/30 border border-gray-700 rounded-xl p-4 sm:p-6">
+                    <h2 class="text-2xl font-semibold mb-4">Iuran Sampah</h2>
+                    <div id="sampah-loader" class="text-center py-8">Memuat data...</div>
+                    <div class="table-container overflow-y-auto hidden">
+                        <table class="w-full text-sm text-left">
+                            <thead class="sticky-header bg-gray-800/50">
+                                <tr>
+                                    <th class="p-3">Nama</th>
+                                    <th class="p-3">Total Lunas</th>
+                                    <th class="p-3">Tunggakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sampah-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Tabel Iuran IPAL -->
+                <div class="bg-gray-800/30 border border-gray-700 rounded-xl p-4 sm:p-6">
+                    <h2 class="text-2xl font-semibold mb-4">Iuran IPAL</h2>
+                     <div id="ipal-loader" class="text-center py-8">Memuat data...</div>
+                    <div class="table-container overflow-y-auto hidden">
+                        <table class="w-full text-sm text-left">
+                            <thead class="sticky-header bg-gray-800/50">
+                                <tr>
+                                    <th class="p-3">Nama</th>
+                                    <th class="p-3">Total Lunas</th>
+                                    <th class="p-3">Tunggakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ipal-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== VIEW DETAIL PELANGGAN (SETELAH LOGIN) ===== -->
+        <!-- File: index.html -->
+        <!-- Waktu: 04 Oktober 2025, 09:16 WIB -->
+        <!-- Fungsi: Tampilan detail pribadi setelah pelanggan berhasil login. -->
+        <div id="dashboard-view" class="dashboard-container hidden bg-gray-800/50 border border-gray-700 rounded-2xl shadow-2xl p-6 md:p-8 text-white">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold" id="welcome-name"></h2>
+                    <p class="text-gray-400">Berikut adalah detail tagihan Anda.</p>
+                </div>
+                <button id="logout-btn" class="text-gray-400 hover:text-white transition-colors p-2 rounded-full bg-gray-700/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                </button>
+            </div>
+            <!-- ... (Konten dashboard detail sama seperti versi sebelumnya) ... -->
+             <div class="bg-gray-700/30 rounded-lg p-4 mb-6">
+                <h3 class="text-lg font-semibold mb-3 border-b border-gray-600 pb-2">Data Pelanggan</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                    <div><strong class="text-gray-400">No. Pelanggan:</strong> <span id="detail-no-pelanggan"></span></div>
+                    <div><strong class="text-gray-400">No. HP:</strong> <span id="detail-no-hp"></span></div>
+                    <div class="col-span-1 sm:col-span-2"><strong class="text-gray-400">Alamat:</strong> <span id="detail-alamat"></span></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold mb-3">Riwayat Tagihan</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-700/50">
+                            <tr>
+                                <th class="px-4 py-3 rounded-l-lg">Bulan/Tahun</th>
+                                <th class="px-4 py-3">Iuran Sampah</th>
+                                <th class="px-4 py-3">Iuran IPAL</th>
+                                <th class="px-4 py-3">Total</th>
+                                <th class="px-4 py-3 rounded-r-lg">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="billing-history"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // File: index.html (JavaScript)
+    // Waktu: 04 Oktober 2025, 09:16 WIB
+    // Fungsi: Mengatur logika untuk dashboard publik dan login pelanggan.
+    const publicView = document.getElementById('public-view');
+    const dashboardView = document.getElementById('dashboard-view');
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const phoneInput = document.getElementById('phone');
+    const errorMessage = document.getElementById('error-message');
+
+    /**
+     * Format angka menjadi Rupiah.
+     */
+    function formatRupiah(number) {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+    }
+
+    /**
+     * Mengambil dan menampilkan data untuk dashboard publik.
+     */
+    async function loadPublicDashboard() {
+        try {
+            const response = await fetch('get_all_data.php?view=public');
+            if (!response.ok) throw new Error('Gagal mengambil data iuran.');
+            
+            const data = await response.json();
+            
+            const sampahBody = document.getElementById('sampah-table-body');
+            const ipalBody = document.getElementById('ipal-table-body');
+            sampahBody.innerHTML = '';
+            ipalBody.innerHTML = '';
+
+            data.forEach(p => {
+                // Baris untuk tabel sampah
+                sampahBody.innerHTML += `
+                    <tr class="border-b border-gray-700 hover:bg-gray-700/40">
+                        <td class="p-3">${p.nama}</td>
+                        <td class="p-3 text-green-400">${formatRupiah(p.total_lunas_sampah)}</td>
+                        <td class="p-3 text-red-400">${formatRupiah(p.total_tunggakan_sampah)}</td>
+                    </tr>
+                `;
+                // Baris untuk tabel IPAL
+                ipalBody.innerHTML += `
+                    <tr class="border-b border-gray-700 hover:bg-gray-700/40">
+                        <td class="p-3">${p.nama}</td>
+                        <td class="p-3 text-green-400">${formatRupiah(p.total_lunas_ipal)}</td>
+                        <td class="p-3 text-red-400">${formatRupiah(p.total_tunggakan_ipal)}</td>
+                    </tr>
+                `;
+            });
+
+        } catch (error) {
+            document.getElementById('sampah-loader').textContent = error.message;
+            document.getElementById('ipal-loader').textContent = error.message;
+        } finally {
+            document.getElementById('sampah-loader').classList.add('hidden');
+            document.getElementById('ipal-loader').classList.add('hidden');
+            document.querySelector('#sampah-table-body').parentElement.parentElement.classList.remove('hidden');
+            document.querySelector('#ipal-table-body').parentElement.parentElement.classList.remove('hidden');
+        }
+    }
+
+    /**
+     * Fungsi untuk login pelanggan.
+     */
+    async function handleLogin() {
+        const phoneNumber = phoneInput.value.trim();
+        errorMessage.classList.add('hidden');
+        if (!phoneNumber) {
+            showError("Nomor HP tidak boleh kosong.");
+            return;
+        }
+
+        try {
+            // Menggunakan api.php untuk otentikasi
+            const response = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: phoneNumber })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Nomor tidak ditemukan.');
+            }
+
+            const user = await response.json();
+            displayUserData(user);
+            publicView.classList.add('hidden');
+            dashboardView.classList.remove('hidden');
+
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    /**
+     * Menampilkan detail data pelanggan setelah login.
+     */
+    function displayUserData(user) {
+        document.getElementById('welcome-name').textContent = `Selamat Datang, ${user.nama}`;
+        document.getElementById('detail-no-pelanggan').textContent = user.no_pelanggan;
+        document.getElementById('detail-no-hp').textContent = user.no_hp;
+        document.getElementById('detail-alamat').textContent = user.alamat;
+        const billingHistoryTable = document.getElementById('billing-history');
+        billingHistoryTable.innerHTML = '';
+        user.tagihan.forEach(t => {
+            const total = t.sampah + t.ipal;
+            const statusClass = t.status === 'Lunas' ? 'text-green-400 bg-green-900/50' : 'text-yellow-400 bg-yellow-900/50';
+            billingHistoryTable.innerHTML += `
+                <tr class="border-b border-gray-700 hover:bg-gray-700/40">
+                    <td class="px-4 py-3 font-medium">${t.bulan}</td>
+                    <td class="px-4 py-3">${formatRupiah(t.sampah)}</td>
+                    <td class="px-4 py-3">${formatRupiah(t.ipal)}</td>
+                    <td class="px-4 py-3 font-semibold">${formatRupiah(total)}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 font-semibold text-xs rounded-full ${statusClass}">${t.status}</span></td>
+                </tr>
+            `;
+        });
+    }
+
+    function handleLogout() {
+        dashboardView.classList.add('hidden');
+        publicView.classList.remove('hidden');
+        phoneInput.value = "";
+    }
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.remove('hidden');
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', loadPublicDashboard);
+    loginBtn.addEventListener('click', handleLogin);
+    logoutBtn.addEventListener('click', handleLogout);
+    phoneInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') handleLogin(); });
+
+</script>
+</body>
+</html>
+
